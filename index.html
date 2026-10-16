@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantum Mechanics Quiz</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Segoe UI', system-ui, sans-serif; }
+  .option-btn { transition: all 0.2s ease; text-align:left; }
+  .option-btn:disabled { cursor: not-allowed; }
+  .option-btn.correct { background:#14532d !important; border-color:#22c55e !important; color:#86efac; }
+  .option-btn.incorrect { background:#450a0a !important; border-color:#ef4444 !important; color:#fca5a5; }
+  .option-btn.revealed { background:#1e3a5f !important; border-color:#3b82f6 !important; color:#93c5fd; }
+  .cat-badge { font-size:0.65rem; }
+  .diff-badge { font-size:0.65rem; }
+  .progress-bar { transition: width 0.3s ease; }
+  @keyframes pulse-green { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0)} 50%{box-shadow:0 0 0 6px rgba(34,197,94,0.3)} }
+  .correct-flash { animation: pulse-green 0.5s ease; }
+</style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+<div class="max-w-2xl mx-auto p-4">
+
+  <div class="text-center mb-5">
+    <h1 class="text-3xl font-bold text-violet-400 mb-1">Quantum Mechanics Quiz</h1>
+    <p class="text-gray-400 text-sm">50+ questions on wave functions, uncertainty, spin, tunneling & more</p>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="flex gap-2 justify-center mb-5 flex-wrap text-sm">
+    <div class="bg-gray-800 rounded-lg px-3 py-2 text-center">
+      <div class="text-white font-bold" id="stat-answered">0</div>
+      <div class="text-gray-500 text-xs">Answered</div>
+    </div>
+    <div class="bg-gray-800 rounded-lg px-3 py-2 text-center">
+      <div class="text-green-400 font-bold" id="stat-correct">0</div>
+      <div class="text-gray-500 text-xs">Correct</div>
+    </div>
+    <div class="bg-gray-800 rounded-lg px-3 py-2 text-center">
+      <div class="text-yellow-400 font-bold" id="stat-accuracy">—%</div>
+      <div class="text-gray-500 text-xs">Accuracy</div>
+    </div>
+    <div class="bg-gray-800 rounded-lg px-3 py-2 text-center">
+      <div class="text-cyan-400 font-bold" id="stat-streak">0</div>
+      <div class="text-gray-500 text-xs">Streak</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-gray-800 rounded-xl p-3 mb-4">
+    <div class="flex flex-wrap gap-2 items-center">
+      <span class="text-xs text-gray-400 uppercase tracking-wider">Category:</span>
+      <select id="cat-filter" class="bg-gray-700 text-sm rounded-lg px-3 py-1.5 text-white border border-gray-600 focus:outline-none" aria-label="Filter by category" onchange="applyFilters()">
+        <option value="all">All Topics</option>
+        <option value="wave-particle">Wave-Particle Duality</option>
+        <option value="schrodinger">Schrödinger Equation</option>
+        <option value="uncertainty">Uncertainty Principle</option>
+        <option value="quantum-numbers">Quantum Numbers</option>
+        <option value="spin">Spin & Pauli</option>
+        <option value="tunneling">Quantum Tunneling</option>
+        <option value="measurement">Measurement & Collapse</option>
+        <option value="entanglement">Entanglement & Bell</option>
+        <option value="orbitals">Atomic Orbitals</option>
+        <option value="quantization">Energy Quantization</option>
+      </select>
+      <select id="diff-filter" class="bg-gray-700 text-sm rounded-lg px-3 py-1.5 text-white border border-gray-600 focus:outline-none" aria-label="Filter by difficulty" onchange="applyFilters()">
+        <option value="all">All Levels</option>
+        <option value="conceptual">Conceptual</option>
+        <option value="mathematical">Mathematical</option>
+        <option value="advanced">Advanced</option>
+      </select>
+      <button onclick="resetProgress()" class="ml-auto text-xs bg-red-900 hover:bg-red-800 rounded-lg px-3 py-1.5 transition-colors" aria-label="Reset progress">Reset</button>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="bg-gray-700 rounded-full h-1.5 mb-4 overflow-hidden">
+    <div id="progress-bar" class="progress-bar bg-violet-500 h-full rounded-full" style="width:0%"></div>
+  </div>
+
+  <!-- Question card -->
+  <div class="bg-gray-800 rounded-2xl p-5 mb-4">
+    <div class="flex gap-2 mb-3 flex-wrap">
+      <span id="q-cat" class="cat-badge px-2 py-0.5 rounded-full bg-violet-900 text-violet-300"></span>
+      <span id="q-diff" class="diff-badge px-2 py-0.5 rounded-full bg-gray-700 text-gray-400"></span>
+      <span id="q-num" class="ml-auto text-xs text-gray-500"></span>
+    </div>
+    <p id="q-text" class="text-base font-medium text-white mb-5 leading-relaxed"></p>
+    <div id="options" class="space-y-2"></div>
+  </div>
+
+  <!-- Explanation -->
+  <div id="explanation" class="hidden bg-gray-800 rounded-2xl p-4 mb-4 border border-violet-800">
+    <div class="flex items-start gap-2">
+      <span id="exp-icon" class="text-lg mt-0.5"></span>
+      <div>
+        <p id="exp-title" class="font-semibold mb-1 text-sm"></p>
+        <p id="exp-text" class="text-gray-300 text-sm leading-relaxed"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Next button -->
+  <div class="flex justify-center">
+    <button id="next-btn" onclick="nextQuestion()" class="hidden bg-violet-700 hover:bg-violet-600 rounded-xl px-8 py-3 font-semibold transition-colors" aria-label="Next question">Next Question →</button>
+  </div>
+
+</div>
+
+<script>
+const QUESTIONS = [
+  // Wave-Particle Duality
+  { id:1, cat:'wave-particle', diff:'conceptual', q:'In the double-slit experiment with single photons, what is observed on the screen after many photons pass through?', opts:['Two bright lines directly behind the slits','An interference pattern of alternating bright and dark bands','A single bright spot in the center','Random scattered dots with no pattern'], ans:1, exp:"Even single photons build up an interference pattern over time, demonstrating that each photon passes through both slits simultaneously as a probability wave. The wave nature appears statistically." },
+  { id:2, cat:'wave-particle', diff:'mathematical', q:'The de Broglie wavelength of a particle with momentum p is:', opts:['λ = p/h','λ = h/p','λ = hp','λ = h²/p'], ans:1, exp:"de Broglie's relation λ = h/p links a particle's momentum to its wavelength. Here h is Planck's constant (6.626×10⁻³⁴ J·s). For macroscopic objects, p is huge, making λ negligibly small — explaining why we don't see quantum effects daily." },
+  { id:3, cat:'wave-particle', diff:'conceptual', q:"Which experiment first demonstrated the particle nature of light (photons)?", opts:['Young\'s double-slit experiment','The photoelectric effect','Compton scattering','Davisson-Germer experiment'], ans:1, exp:"Einstein explained the photoelectric effect (1905) by proposing light consists of discrete quanta (photons). The kinetic energy of ejected electrons depends on light frequency, not intensity — only explainable by particle-like packets of energy." },
+  { id:4, cat:'wave-particle', diff:'advanced', q:'Which experiment directly demonstrated wave behavior of electrons?', opts:['Photoelectric effect','Rutherford scattering','Davisson-Germer electron diffraction','Stern-Gerlach experiment'], ans:2, exp:"Davisson and Germer (1927) scattered electrons off a nickel crystal and observed diffraction patterns — direct evidence of electron waves. This confirmed de Broglie's hypothesis that matter has wave-like properties." },
+  { id:5, cat:'wave-particle', diff:'mathematical', q:"A particle's kinetic energy is E. Its de Broglie wavelength is proportional to:", opts:['E','1/E','1/√E','√E'], ans:2, exp:"Since E = p²/2m, we have p = √(2mE). Then λ = h/p = h/√(2mE), so λ ∝ 1/√E. Doubling kinetic energy decreases wavelength by factor √2." },
+
+  // Schrödinger Equation
+  { id:6, cat:'schrodinger', diff:'conceptual', q:"What does the wavefunction ψ(x,t) represent in quantum mechanics?", opts:['The exact position of the particle','The exact momentum of the particle','A probability amplitude whose |ψ|² gives probability density','The kinetic energy of the particle'], ans:2, exp:"The wavefunction ψ is a complex probability amplitude. Its squared modulus |ψ(x,t)|² gives the probability density of finding the particle at position x at time t. This is the Born interpretation." },
+  { id:7, cat:'schrodinger', diff:'mathematical', q:"The time-independent Schrödinger equation is:", opts:['iℏ∂ψ/∂t = Ĥψ','Ĥψ = Eψ','ψ = Ae^(ikx)','p = mv'], ans:1, exp:"The time-independent Schrödinger equation Ĥψ = Eψ is an eigenvalue equation where Ĥ is the Hamiltonian operator (kinetic + potential energy) and E is the total energy eigenvalue. Solutions ψ are stationary states." },
+  { id:8, cat:'schrodinger', diff:'mathematical', q:"For a particle in a 1D infinite square well of width L, the energy levels are:", opts:['Eₙ = n²π²ℏ²/(2mL²)','Eₙ = nℏω','Eₙ = ℏ²k²/(2m)','Eₙ = n·h'], ans:0, exp:"The allowed energies are Eₙ = n²π²ℏ²/(2mL²) = n²E₁ for n=1,2,3,... This means energy is quantized and grows with n². The ground state (n=1) has non-zero energy E₁ = π²ℏ²/(2mL²), the zero-point energy." },
+  { id:9, cat:'schrodinger', diff:'advanced', q:"What is the normalization condition for a valid wavefunction?", opts:['ψ(x)=0 everywhere','∫|ψ(x)|²dx = 1','ψ(x) must be real','∫ψ(x)dx = 0'], ans:1, exp:"A physically valid wavefunction must be normalizable: ∫|ψ(x)|²dx = 1 over all space. This ensures the total probability of finding the particle somewhere is exactly 100%. Wavefunctions must also be continuous and square-integrable." },
+  { id:10, cat:'schrodinger', diff:'conceptual', q:"In a stationary state of quantum mechanics, what is constant in time?", opts:['The wavefunction ψ','The probability density |ψ|²','Both ψ and |ψ|²','Neither ψ nor |ψ|²'], ans:1, exp:"In a stationary state ψ(x,t) = ψ(x)e^(-iEt/ℏ). The wavefunction oscillates with a phase factor e^(-iEt/ℏ), but the probability density |ψ(x,t)|² = |ψ(x)|² is time-independent. Hence 'stationary' — the probability doesn't change." },
+
+  // Uncertainty Principle
+  { id:11, cat:'uncertainty', diff:'conceptual', q:"Heisenberg's uncertainty principle states:", opts:['Δx·Δp = h','Δx·Δp ≥ ℏ/2','Δx·Δp ≤ ℏ/2','Δx = Δp'], ans:1, exp:"The Robertson-Schrödinger form is Δx·Δp ≥ ℏ/2. The product of standard deviations in position and momentum is at least ℏ/2 (where ℏ = h/2π ≈ 1.055×10⁻³⁴ J·s). This is not about measurement disturbance but a fundamental property of quantum states." },
+  { id:12, cat:'uncertainty', diff:'mathematical', q:"If an electron is confined to a region of Δx = 0.1 nm, what is the minimum uncertainty in its momentum?", opts:['About 5.3×10⁻²⁵ kg·m/s','Exactly zero','About 1.05×10⁻²⁴ kg·m/s','About 6.6×10⁻²⁴ kg·m/s'], ans:0, exp:"Δp_min = ℏ/(2Δx) = (1.055×10⁻³⁴)/(2×10⁻¹⁰) ≈ 5.3×10⁻²⁵ kg·m/s. This corresponds to a kinetic energy of about 0.97 eV — significantly affecting electron behavior at the nanometer scale." },
+  { id:13, cat:'uncertainty', diff:'conceptual', q:"The energy-time uncertainty relation ΔE·Δt ≥ ℏ/2 means:", opts:['Measuring energy disturbs time','A short-lived state has a broad energy spectrum','Energy is not conserved at short times','Time is quantized'], ans:1, exp:"The energy-time uncertainty means that a quantum state with a short lifetime Δt has an energy uncertainty ΔE ≥ ℏ/(2Δt). This explains spectral line width: excited atomic states with short lifetimes emit photons over a range of frequencies (natural linewidth)." },
+  { id:14, cat:'uncertainty', diff:'advanced', q:"The uncertainty principle is a consequence of:", opts:['Experimental measurement limitations','The non-commutativity of position and momentum operators: [x̂,p̂]=iℏ','The fact that particles are very small','The granular nature of space'], ans:1, exp:"The uncertainty principle follows mathematically from [x̂,p̂] = iℏ (x and p don't commute as operators). For any two non-commuting observables Â and B̂, Robertson showed that ΔA·ΔB ≥ |⟨[Â,B̂]⟩|/2." },
+
+  // Quantum Numbers
+  { id:15, cat:'quantum-numbers', diff:'conceptual', q:"The principal quantum number n determines:", opts:['The shape of the orbital','The magnetic orientation of the orbital','The overall energy level and size of the orbital','The spin of the electron'], ans:2, exp:"n = 1, 2, 3, ... is the principal quantum number. It mainly determines the energy of the electron (Eₙ = -13.6/n² eV in hydrogen) and the average distance from the nucleus. Larger n means higher energy and larger orbital." },
+  { id:16, cat:'quantum-numbers', diff:'conceptual', q:"The azimuthal (orbital angular momentum) quantum number ℓ determines:", opts:['The energy of the orbital','The shape of the orbital','The spin of the electron','The magnetic moment'], ans:1, exp:"ℓ = 0, 1, 2, ..., n-1 determines orbital shape. ℓ=0: spherical (s), ℓ=1: dumbbell (p), ℓ=2: cloverleaf (d), ℓ=3: complex (f). The orbital angular momentum magnitude is L = ℏ√(ℓ(ℓ+1))." },
+  { id:17, cat:'quantum-numbers', diff:'mathematical', q:"For n=3, how many possible combinations of (n, ℓ, mₗ) exist?", opts:['3','6','9','27'], ans:2, exp:"For n=3: ℓ can be 0,1,2. For ℓ=0: mₗ=0 (1 value); ℓ=1: mₗ=-1,0,+1 (3 values); ℓ=2: mₗ=-2,-1,0,+1,+2 (5 values). Total = 1+3+5 = 9. Adding spin, 18 electrons can occupy the n=3 shell." },
+  { id:18, cat:'quantum-numbers', diff:'mathematical', q:"The magnetic quantum number mₗ ranges from:", opts:['0 to ℓ','-ℓ to +ℓ','0 to n-1','-n to +n'], ans:1, exp:"mₗ = -ℓ, -ℓ+1, ..., 0, ..., ℓ-1, ℓ. It determines the z-component of orbital angular momentum: Lz = mₗℏ. For ℓ=1 (p orbital), mₗ can be -1, 0, or +1, corresponding to the three p orbitals (px, py, pz)." },
+
+  // Spin & Pauli
+  { id:19, cat:'spin', diff:'conceptual', q:"The spin quantum number ms for electrons can only take values:", opts:['0, 1, 2','−½ and +½','−1, 0, +1','Any integer'], ans:1, exp:"Electrons are spin-½ particles (fermions). The spin projection along any axis takes only two values: ms = +½ (spin-up, ↑) or ms = −½ (spin-down, ↓). This intrinsic angular momentum has no classical analog." },
+  { id:20, cat:'spin', diff:'conceptual', q:"The Pauli Exclusion Principle states:", opts:['Two particles can never be in the same place','No two identical fermions can occupy the same quantum state simultaneously','Bosons must all be in the same state','Electrons repel each other'], ans:1, exp:"Pauli's exclusion principle (1925) applies to fermions (particles with half-integer spin like electrons, protons). No two identical fermions can have the same set of quantum numbers. This prevents electrons from all collapsing to the n=1 shell, explaining atomic structure and the periodic table." },
+  { id:21, cat:'spin', diff:'advanced', q:"The Stern-Gerlach experiment demonstrated:", opts:['Wave-particle duality','Quantization of orbital angular momentum','Quantization of spin angular momentum','Electron diffraction'], ans:2, exp:"Stern and Gerlach (1922) passed silver atoms through a non-uniform magnetic field and observed two discrete deflection spots. Silver has one unpaired electron; its spin angular momentum is quantized to ms=±½. This was direct proof of space quantization of angular momentum." },
+  { id:22, cat:'spin', diff:'mathematical', q:"The total spin angular momentum of a spin-½ particle has magnitude:", opts:['ℏ/2','ℏ','(√3/2)ℏ','ℏ√2'], ans:2, exp:"S = ℏ√(s(s+1)) = ℏ√(½·3/2) = ℏ√(3/4) = (√3/2)ℏ. The spin projection Sz = msℏ = ±ℏ/2, but the total magnitude √(3/4)ℏ is larger. This is because the spin vector can never be fully aligned with the measurement axis." },
+
+  // Quantum Tunneling
+  { id:23, cat:'tunneling', diff:'conceptual', q:"Quantum tunneling refers to:", opts:['A particle moving through a hole in a wall','A particle penetrating through a potential barrier even when its energy is less than the barrier height','An electron jumping between energy levels','A particle moving faster than light'], ans:1, exp:"Quantum tunneling occurs when a particle penetrates through a potential energy barrier that it classically couldn't surmount. The wavefunction decays exponentially inside the barrier but doesn't go to zero, giving a finite transmission probability." },
+  { id:24, cat:'tunneling', diff:'conceptual', q:"The tunneling probability through a barrier depends most strongly on:", opts:['The mass and charge of the particle','The barrier width and height (T ≈ e^(-2κd))','The temperature of the particle','The color of the particle'], ans:1, exp:"T ≈ e^(-2κd) where κ = √(2m(V₀-E))/ℏ and d is barrier width. Tunneling decreases exponentially with barrier width and with √(barrier height - particle energy). Heavier particles tunnel far less (explains why only electrons/protons tunnel in chemistry, not whole molecules easily)." },
+  { id:25, cat:'tunneling', diff:'conceptual', q:"Scanning Tunneling Microscopy (STM) works because:", opts:['Light diffracts at atomic scales','Electrons tunnel between tip and surface, with current sensitive to gap distance','Magnetic fields deflect electrons','Sound waves reflect off atoms'], ans:1, exp:"STM uses quantum tunneling: electrons tunnel across the vacuum gap between a sharp metallic tip and a surface. The tunneling current changes exponentially with gap distance (sensitivity ≈ 1 Å). This allows imaging individual atoms on surfaces." },
+  { id:26, cat:'tunneling', diff:'advanced', q:"Nuclear fusion in stars relies on quantum tunneling because:", opts:['Protons are too large to overcome the Coulomb barrier','Stellar temperatures are not high enough for protons to classically surmount the Coulomb barrier','Gravity assists tunneling','Stars emit gamma rays that catalyze fusion'], ans:1, exp:"Even at stellar core temperatures (~10⁷ K), thermal energies are ~1 keV, far below the ~1 MeV Coulomb barrier between protons. Fusion occurs because protons quantum-tunnel through the barrier. Without tunneling, stars could not shine." },
+
+  // Measurement & Collapse
+  { id:27, cat:'measurement', diff:'conceptual', q:"The Copenhagen interpretation says: after measurement of an observable, the wavefunction:", opts:['Continues evolving undisturbed','Collapses to the eigenstate corresponding to the measured value','Splits into many worlds','Becomes a classical trajectory'], ans:1, exp:"According to Copenhagen interpretation, measurement causes 'wavefunction collapse': the superposition state reduces to one of the eigenstates of the measured observable. The outcome is probabilistic, but once measured, the system is in a definite state — until it evolves again." },
+  { id:28, cat:'measurement', diff:'advanced', q:"Schrödinger's cat thought experiment was designed to illustrate:", opts:['How cats behave in boxes','The absurdity of applying quantum superposition to macroscopic objects','That measurement is always disturbing','Radioactive decay rates'], ans:1, exp:"Schrödinger proposed his cat paradox (1935) to show that the Copenhagen interpretation, if taken literally, implies macroscopic objects (cats) can be in superpositions of dead and alive states. It highlights the 'measurement problem' — when does quantum superposition give way to classical definite states?" },
+  { id:29, cat:'measurement', diff:'conceptual', q:"Which of these is NOT a valid quantum state for an electron in a hydrogen atom?", opts:['n=1, ℓ=0','n=2, ℓ=1','n=3, ℓ=2','n=2, ℓ=2'], ans:3, exp:"For principal quantum number n, the azimuthal quantum number ℓ must satisfy 0 ≤ ℓ ≤ n-1. So for n=2, ℓ can only be 0 or 1. ℓ=2 requires n≥3. The state (n=2, ℓ=2) is forbidden." },
+  { id:30, cat:'measurement', diff:'advanced', q:"The quantum Zeno effect states:", opts:['Unstable particles live forever if observed continuously','Frequent measurements can slow or prevent quantum evolution/decay','Particles freeze if cooled to absolute zero','Measurement always destroys the quantum state'], ans:1, exp:"The quantum Zeno effect: repeated rapid measurements can prevent a quantum system from evolving. Each measurement collapses the wavefunction back to the initial state, preventing decay. The name comes from Zeno's paradox; named by Misra and Sudarshan (1977)." },
+
+  // Entanglement & Bell
+  { id:31, cat:'entanglement', diff:'conceptual', q:"Quantum entanglement means:", opts:['Particles that were created together always have the same spin','The quantum state of two particles cannot be described independently of each other, regardless of distance','Particles can communicate faster than light','Particles become identical after interacting'], ans:1, exp:"Entanglement is a quantum correlation where two particles share a joint quantum state that cannot be factored into individual states. Measuring one particle instantly determines correlations with the other, regardless of separation — but this cannot be used for faster-than-light signaling (no-communication theorem)." },
+  { id:32, cat:'entanglement', diff:'advanced', q:"Bell's theorem (1964) proved:", opts:['Quantum mechanics is incomplete','No local hidden variable theory can reproduce all predictions of quantum mechanics','Particles are connected by hidden wires','EPR paradox resolves in Einstein\'s favor'], ans:1, exp:"Bell derived inequalities that any local hidden variable theory must satisfy. Quantum mechanics predicts violations of these inequalities. Experiments by Aspect (1982) and others confirmed quantum predictions — ruling out local hidden variables. The universe is fundamentally non-local in the EPR sense." },
+  { id:33, cat:'entanglement', diff:'conceptual', q:"The EPR paradox (Einstein, Podolsky, Rosen, 1935) argued:", opts:['Quantum mechanics must be wrong','Quantum mechanics is incomplete — hidden variables must exist','Entanglement allows faster-than-light communication','Wavefunction collapse is instantaneous'], ans:1, exp:"EPR argued: if two entangled particles are separated and one is measured, the other instantly has a definite state. Since this seems non-local, they concluded quantum mechanics must be incomplete — there must be hidden variables that predetermine outcomes. Bell's theorem later showed no local hidden variables can explain quantum correlations." },
+
+  // Atomic Orbitals
+  { id:34, cat:'orbitals', diff:'conceptual', q:"The electron configuration of carbon (Z=6) is:", opts:['1s²2s⁴','1s²2s²2p²','1s²2p⁴','2s²2p⁴'], ans:1, exp:"Following the Aufbau principle, Pauli exclusion, and Hund's rule: fill 1s² (2 electrons), then 2s² (2 electrons), then 2p² (2 electrons in separate p orbitals with parallel spins by Hund's rule). Carbon's 6 electrons: 1s²2s²2p²." },
+  { id:35, cat:'orbitals', diff:'conceptual', q:"Hund's rule states:", opts:['Electrons fill lower energy orbitals first','Before any orbital in a subshell gets a second electron, each orbital gets one electron with maximum spin multiplicity','Electrons pair up in orbitals as soon as possible','s orbitals fill before p orbitals'], ans:1, exp:"Hund's rule of maximum multiplicity: electrons occupy separate orbitals in a subshell (with parallel spins) before pairing. This minimizes electron-electron repulsion. For carbon's 2p² electrons: each goes into a separate p orbital with spin-up (↑) before any pairing." },
+  { id:36, cat:'orbitals', diff:'mathematical', q:"The probability density of finding an electron at nucleus (r=0) is non-zero for:", opts:['p orbitals only','s orbitals only','d orbitals only','All orbitals'], ans:1, exp:"Only s orbitals (ℓ=0) have non-zero probability density at r=0. The wavefunction for ℓ>0 orbitals vanishes at r=0 because the angular part has a node at the origin. This is why s-electron penetration to the nucleus is important for hyperfine interactions." },
+  { id:37, cat:'orbitals', diff:'advanced', q:"The number of radial nodes in the hydrogen atom orbital ψₙₗ is:", opts:['n','ℓ','n-ℓ-1','n-1'], ans:2, exp:"A hydrogen orbital has (n-ℓ-1) radial nodes (spherical shells where ψ=0) and ℓ angular nodes. Total nodes = n-1. For 3p: n=3,ℓ=1, radial nodes = 3-1-1 = 1. For 2s: n=2,ℓ=0, radial nodes = 1. The 1s orbital has no nodes." },
+
+  // Energy Quantization
+  { id:38, cat:'quantization', diff:'mathematical', q:"For a 1D quantum harmonic oscillator, the energy levels are:", opts:['Eₙ = nℏω','Eₙ = (n+½)ℏω','Eₙ = n²ℏω','Eₙ = ℏω/n'], ans:1, exp:"The quantum harmonic oscillator has equally-spaced energy levels Eₙ = (n+½)ℏω for n=0,1,2,... The n=0 state has energy ½ℏω (zero-point energy) — the system can never be completely at rest, consistent with the uncertainty principle." },
+  { id:39, cat:'quantization', diff:'conceptual', q:"Planck's quantum hypothesis explained blackbody radiation by assuming:", opts:['Light travels at finite speed','Energy is emitted/absorbed in discrete packets E=hν','Electrons orbit the nucleus','Electric fields oscillate at specific frequencies'], ans:1, exp:"Planck (1900) resolved the 'ultraviolet catastrophe' by postulating that oscillators emit/absorb energy in discrete quanta E=hν (where h is Planck's constant, ν is frequency). This revolutionary idea — that energy is quantized — launched quantum physics." },
+  { id:40, cat:'quantization', diff:'mathematical', q:"The ground state energy of a hydrogen atom is:", opts:['-27.2 eV','-13.6 eV','-3.4 eV','-1.5 eV'], ans:1, exp:"E₁ = -13.6 eV for hydrogen's ground state (n=1). The negative sign means the electron is bound. Energy levels are Eₙ = -13.6/n² eV. The ionization energy is |E₁| = 13.6 eV. This result was first explained by Bohr's model and later by solving the Schrödinger equation." },
+  { id:41, cat:'quantization', diff:'advanced', q:"The zero-point energy of a quantum harmonic oscillator is important because:", opts:['It equals kT at room temperature','It shows that quantum systems cannot have zero kinetic energy, consistent with the uncertainty principle','It only appears in classical mechanics','It can be extracted as useful work'], ans:1, exp:"The zero-point energy ½ℏω means a quantum oscillator has kinetic energy even at T=0. This is required by the uncertainty principle: if position were perfectly localized (Δx→0), momentum uncertainty would be infinite. Zero-point energy is real — it causes the Casimir effect." },
+
+  // More across categories
+  { id:42, cat:'wave-particle', diff:'advanced', q:"Which-way information in a double-slit experiment causes:", opts:['A sharper interference pattern','Destruction of the interference pattern','No change to the pattern','Fringes to shift sideways'], ans:1, exp:"If 'which-way' (which-slit) information is available, even in principle, the interference pattern disappears. This is wave-particle complementarity: you can observe wave behavior (interference) OR particle behavior (path), but not both simultaneously." },
+  { id:43, cat:'tunneling', diff:'mathematical', q:"If the barrier width doubles, the tunneling probability approximately:", opts:['Halves','Decreases by e^(-2κd)','Becomes negligibly small (exponentially smaller)','Doubles'], ans:2, exp:"T ≈ e^(-2κd). If d→2d, T → e^(-4κd) = (e^(-2κd))² = T². So T squares — it becomes exponentially smaller. For κd >> 1, doubling the width squares the (already tiny) probability, making tunneling essentially impossible." },
+  { id:44, cat:'spin', diff:'conceptual', q:"Bosons differ from fermions in that bosons:", opts:['Have no spin','Can occupy the same quantum state (Bose-Einstein statistics)','Always have higher energy','Cannot interact with electromagnetic radiation'], ans:1, exp:"Bosons have integer spin (0, 1, 2, ...) and obey Bose-Einstein statistics — multiple bosons can occupy the same quantum state. This leads to Bose-Einstein condensation at low temperatures. Photons, Higgs boson, and helium-4 are bosons. Fermions (half-integer spin) obey Fermi-Dirac statistics." },
+  { id:45, cat:'measurement', diff:'advanced', q:"In the many-worlds interpretation (Everett), what happens at measurement?", opts:['Wavefunction collapses to one outcome','The universe branches into separate worlds for each possible outcome','The observer influences the result','Nothing special — there is no measurement problem'], ans:1, exp:"Everett's many-worlds interpretation (1957): there is no wavefunction collapse. Instead, the universe splits into multiple branches, one for each possible measurement outcome. All outcomes occur in different branches. This is deterministic but requires an enormous proliferation of parallel worlds." },
+  { id:46, cat:'entanglement', diff:'advanced', q:"Quantum teleportation:", opts:['Transmits matter faster than light','Uses entanglement to transfer quantum state information, requiring classical communication channel too','Copies a quantum state perfectly','Only works for photons'], ans:1, exp:"Quantum teleportation (Bennett et al., 1993) transfers an unknown quantum state from one particle to another using entanglement + classical communication. It cannot exceed light speed (classical channel is required). Also, the no-cloning theorem prevents copying quantum states — the original state is destroyed." },
+  { id:47, cat:'schrodinger', diff:'advanced', q:"The probability current J in quantum mechanics satisfies:", opts:['∂J/∂t = 0','∂ρ/∂t + ∇·J = 0 (continuity equation)','J = ψ²','J must always be positive'], ans:1, exp:"The probability density ρ = |ψ|² satisfies ∂ρ/∂t + ∇·J = 0, the continuity equation. J = (ℏ/2mi)(ψ*∇ψ − ψ∇ψ*) is the probability current density. This expresses local conservation of probability — probability doesn't disappear, it flows." },
+  { id:48, cat:'uncertainty', diff:'advanced', q:"For a Gaussian wavepacket, the uncertainty product Δx·Δp equals:", opts:['ℏ/2 (minimum uncertainty state)','ℏ','2ℏ','ℏ/4'], ans:0, exp:"Gaussian wavepackets are minimum uncertainty states (coherent states or squeezed states): Δx·Δp = ℏ/2. This is the tightest possible uncertainty. Any other wavepacket shape has Δx·Δp > ℏ/2. Coherent states of the harmonic oscillator maintain this minimum uncertainty over time." },
+  { id:49, cat:'orbitals', diff:'mathematical', q:"The 2p orbital has how many angular nodes?", opts:['0','1','2','3'], ans:1, exp:"Angular nodes = ℓ = 1 for p orbitals. Angular nodes are planes (or cones) through the nucleus where the angular part of ψ = 0. For 2p: one nodal plane (e.g., xy-plane for 2pz). Total nodes = n-1 = 1; since angular nodes = 1, radial nodes = 0." },
+  { id:50, cat:'quantization', diff:'conceptual', q:"The photoelectric effect shows that light frequency must exceed a threshold because:", opts:['Low-frequency photons travel too slowly','Each photon must have enough energy (E=hν) to overcome the work function of the metal','Low-frequency light has too many photons','Metals absorb only certain wavelengths'], ans:1, exp:"Each photon has energy E=hν. To eject an electron, E must exceed the work function Φ (the binding energy of electrons to the metal). If hν < Φ, no electrons are ejected regardless of intensity. If hν > Φ, electrons are ejected with kinetic energy KE = hν − Φ. Einstein won the 1921 Nobel Prize for this explanation." },
+  { id:51, cat:'wave-particle', diff:'mathematical', q:"A photon has energy E = 3 eV. Its wavelength is approximately:", opts:['413 nm (violet)','620 nm (orange)','310 nm (UV)','930 nm (infrared)'], ans:0, exp:"λ = hc/E = (4.136×10⁻¹⁵ eV·s × 3×10⁸ m/s) / 3 eV ≈ 414 nm. This is in the violet part of the visible spectrum. The handy formula: λ(nm) ≈ 1240/E(eV). So 1240/3 ≈ 413 nm." },
+  { id:52, cat:'spin', diff:'advanced', q:"The spin-statistics theorem connects:", opts:['Measurement disturbance to energy uncertainty','Integer spin with bosonic statistics and half-integer spin with fermionic statistics','Spin direction with orbital direction','The number of spin states with orbital degeneracy'], ans:1, exp:"The spin-statistics theorem (proved in relativistic QFT) is one of the deepest results in physics: particles with integer spin (0,1,2,...) obey Bose-Einstein statistics; particles with half-integer spin (½, 3/2, ...) obey Fermi-Dirac statistics. This determines whether particles can occupy the same quantum state." },
+];
+
+// ---- State ----
+let filteredQs = [...QUESTIONS];
+let queueIdx = 0;
+let currentQ = null;
+let answered = false;
+let stats = { answered:0, correct:0, streak:0 };
+let progress = {}; // qId -> 'correct'|'incorrect'
+
+function loadStats() {
+  try {
+    const s = JSON.parse(localStorage.getItem('qm-quiz-stats') || '{}');
+    stats = { answered:s.answered||0, correct:s.correct||0, streak:s.streak||0 };
+    progress = s.progress || {};
+  } catch(e) {}
+  updateDisplay();
+}
+
+function saveStats() {
+  localStorage.setItem('qm-quiz-stats', JSON.stringify({ ...stats, progress }));
+}
+
+function updateDisplay() {
+  document.getElementById('stat-answered').textContent = stats.answered;
+  document.getElementById('stat-correct').textContent = stats.correct;
+  document.getElementById('stat-accuracy').textContent = stats.answered > 0 ? Math.round(stats.correct/stats.answered*100) + '%' : '—%';
+  document.getElementById('stat-streak').textContent = stats.streak;
+}
+
+function applyFilters() {
+  const cat = document.getElementById('cat-filter').value;
+  const diff = document.getElementById('diff-filter').value;
+  filteredQs = QUESTIONS.filter(q =>
+    (cat === 'all' || q.cat === cat) &&
+    (diff === 'all' || q.diff === diff)
+  );
+  // Shuffle
+  filteredQs = filteredQs.sort(() => Math.random() - 0.5);
+  queueIdx = 0;
+  showQuestion();
+}
+
+function showQuestion() {
+  if (filteredQs.length === 0) {
+    document.getElementById('q-text').textContent = 'No questions match the selected filters.';
+    document.getElementById('options').innerHTML = '';
+    return;
+  }
+  currentQ = filteredQs[queueIdx % filteredQs.length];
+  answered = false;
+
+  const catLabels = { 'wave-particle':'Wave-Particle','schrodinger':'Schrödinger Eq.','uncertainty':'Uncertainty','quantum-numbers':'Quantum Numbers','spin':'Spin & Pauli','tunneling':'Tunneling','measurement':'Measurement','entanglement':'Entanglement','orbitals':'Atomic Orbitals','quantization':'Energy Quantization' };
+  const diffColors = { conceptual:'bg-green-900 text-green-300', mathematical:'bg-yellow-900 text-yellow-300', advanced:'bg-red-900 text-red-300' };
+
+  document.getElementById('q-cat').textContent = catLabels[currentQ.cat] || currentQ.cat;
+  document.getElementById('q-diff').className = `diff-badge px-2 py-0.5 rounded-full ${diffColors[currentQ.diff]}`;
+  document.getElementById('q-diff').textContent = currentQ.diff.charAt(0).toUpperCase() + currentQ.diff.slice(1);
+  document.getElementById('q-num').textContent = `Q ${(queueIdx % filteredQs.length) + 1} / ${filteredQs.length}`;
+  document.getElementById('q-text').textContent = currentQ.q;
+
+  // Progress bar
+  const pct = filteredQs.length > 0 ? ((queueIdx % filteredQs.length) / filteredQs.length * 100) : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+
+  const optEl = document.getElementById('options');
+  optEl.innerHTML = '';
+  currentQ.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn w-full bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-xl px-4 py-3 text-sm transition-all';
+    btn.innerHTML = `<span class="inline-block w-6 h-6 rounded-full bg-gray-600 text-xs font-bold mr-2 text-center leading-6">${String.fromCharCode(65+i)}</span>${opt}`;
+    btn.onclick = () => selectAnswer(i, btn);
+    btn.setAttribute('aria-label', `Option ${String.fromCharCode(65+i)}: ${opt}`);
+    optEl.appendChild(btn);
+  });
+
+  document.getElementById('explanation').className = 'hidden bg-gray-800 rounded-2xl p-4 mb-4 border border-violet-800';
+  document.getElementById('next-btn').className = 'hidden bg-violet-700 hover:bg-violet-600 rounded-xl px-8 py-3 font-semibold transition-colors';
+}
+
+function selectAnswer(idx, btn) {
+  if (answered) return;
+  answered = true;
+  stats.answered++;
+
+  const correct = idx === currentQ.ans;
+  if (correct) {
+    stats.correct++;
+    stats.streak++;
+    progress[currentQ.id] = 'correct';
+    btn.classList.add('correct');
+  } else {
+    stats.streak = 0;
+    progress[currentQ.id] = 'incorrect';
+    btn.classList.add('incorrect');
+    // Reveal correct answer
+    const allBtns = document.querySelectorAll('#options button');
+    allBtns[currentQ.ans].classList.add('revealed');
+  }
+
+  // Disable all buttons
+  document.querySelectorAll('#options button').forEach(b => b.disabled = true);
+
+  // Show explanation
+  const exp = document.getElementById('explanation');
+  exp.className = 'bg-gray-800 rounded-2xl p-4 mb-4 border ' + (correct ? 'border-green-700' : 'border-red-700');
+  document.getElementById('exp-icon').textContent = correct ? '✅' : '❌';
+  document.getElementById('exp-title').textContent = correct ? 'Correct!' : `Incorrect — The answer is: ${currentQ.opts[currentQ.ans]}`;
+  document.getElementById('exp-title').className = 'font-semibold mb-1 text-sm ' + (correct ? 'text-green-400' : 'text-red-400');
+  document.getElementById('exp-text').textContent = currentQ.exp;
+
+  document.getElementById('next-btn').className = 'bg-violet-700 hover:bg-violet-600 rounded-xl px-8 py-3 font-semibold transition-colors';
+  saveStats();
+  updateDisplay();
+}
+
+function nextQuestion() {
+  queueIdx = (queueIdx + 1) % filteredQs.length;
+  if (queueIdx === 0) {
+    // Reshuffle
+    filteredQs = filteredQs.sort(() => Math.random() - 0.5);
+  }
+  showQuestion();
+}
+
+function resetProgress() {
+  stats = { answered:0, correct:0, streak:0 };
+  progress = {};
+  saveStats();
+  updateDisplay();
+  applyFilters();
+}
+
+loadStats();
+applyFilters();
+</script>
+</body>
+</html>
